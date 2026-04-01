@@ -1,3 +1,2 @@
-# Cloudflare Pages — SPA fallback
-# All unmatched paths serve index.html so the client-side router handles them.
-/*    /index.html    200
+# SPA routing is handled by functions/[[catchall]].js
+# No redirect rules needed here.
