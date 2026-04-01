@@ -15,7 +15,7 @@ const API = (() => {
   return {
     // Auth
     session:  ()           => request('session'),
-    logout:   ()           => window.location.href = '/.netlify/functions/auth-logout',
+    logout:   ()           => window.location.href = '/api/auth-logout',
 
     // Meetings
     meetings: (params = {}) => {

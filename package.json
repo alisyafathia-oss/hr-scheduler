@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "netlify dev",
+    "dev": "wrangler pages dev public --compatibility-flag nodejs_compat",
     "build": "echo 'No build step required for vanilla JS'",
+    "deploy": "wrangler pages deploy public",
     "lint": "echo 'Lint not configured'"
   },
   "dependencies": {
@@ -14,7 +15,8 @@
     "nodemailer": "^6.9.14"
   },
   "devDependencies": {
-    "netlify-cli": "^17.0.0"
+    "netlify-cli": "^17.0.0",
+    "wrangler": "^3.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

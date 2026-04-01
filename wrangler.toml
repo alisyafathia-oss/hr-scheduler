@@ -1,0 +1,24 @@
+# Cloudflare Pages configuration for HR Scheduler
+# Deploy via: Cloudflare Pages Dashboard → Connect to GitHub repo
+#
+# Required environment variables (set in Cloudflare Pages dashboard):
+#   GOOGLE_SERVICE_ACCOUNT_EMAIL
+#   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+#   CONTRACTS_SHEET_ID
+#   PEOPLE_MASTER_SHEET_ID
+#   SCHEDULER_SHEET_ID
+#   HR_CALENDAR_ID
+#   SESSION_SECRET
+#   APP_URL                   ← your Cloudflare Pages URL, e.g. https://hr-scheduler.pages.dev
+#   HR_ADMIN_EMAILS
+#   HR_ADMIN_PASSWORD_HASH
+#   HR_ADMIN_PASSWORD_SALT
+#   M365_USER
+#   M365_PASSWORD
+#   VOTE_WINDOW_HOURS         ← default: 24
+#   CRON_SECRET               ← random secret for the GitHub Actions scheduled sync
+
+name = "hr-scheduler"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "public"
