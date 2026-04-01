@@ -11,7 +11,6 @@
   "dependencies": {
     "@netlify/functions": "^5.1.5",
     "date-fns": "^3.6.0",
-    "googleapis": "^144.0.0",
     "nodemailer": "^6.9.14"
   },
   "devDependencies": {
