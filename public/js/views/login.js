@@ -102,7 +102,7 @@ function attachLoginHandlers() {
     staffErr.style.display = 'none';
     setLoading(staffBtn, true);
     try {
-      const res  = await fetch('/.netlify/functions/auth-login', {
+      const res  = await fetch('/api/auth-login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ loginType: 'id', employeeId }),
       });
@@ -137,7 +137,7 @@ function attachLoginHandlers() {
     hrErr.style.display = 'none';
     setLoading(hrBtn, true);
     try {
-      const res  = await fetch('/.netlify/functions/auth-login', {
+      const res  = await fetch('/api/auth-login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ loginType: 'hr', email, password }),
       });
