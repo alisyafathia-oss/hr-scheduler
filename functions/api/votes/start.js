@@ -11,7 +11,7 @@ const { requireRole } = _auth;
 const { appendSheet } = _googleClient;
 const { sendEmail, votingInviteEmail } = _mailer;
 
-const SHEET_ID = () => process.env.CONTRACTS_SHEET_ID;
+const SHEET_ID = () => process.env.SCHEDULER_SHEET_ID;
 
 function voteToRow(v) {
   return [v.id, v.meetingId, JSON.stringify(v.slots), JSON.stringify(v.voters),

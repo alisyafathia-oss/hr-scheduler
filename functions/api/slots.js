@@ -16,7 +16,7 @@ const { readSheet, appendSheet, writeSheet, listFreeBusy, createCalendarEvent } 
 const { rowToMeeting, meetingToRow } = _scheduleEngine;
 const { sendEmail, bookingConfirmationEmail } = _mailer;
 
-const SHEET_ID    = () => process.env.CONTRACTS_SHEET_ID;
+const SHEET_ID    = () => process.env.SCHEDULER_SHEET_ID;
 const SLOTS_RANGE = "Slots!A2:J";
 const MEET_RANGE  = "Meetings!A2:O";
 

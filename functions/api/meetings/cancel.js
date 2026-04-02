@@ -12,7 +12,7 @@ const { readSheet, writeSheet } = _googleClient;
 const { rowToMeeting, meetingToRow } = _scheduleEngine;
 const { sendEmail, cancellationEmail } = _mailer;
 
-const SHEET_ID = () => process.env.CONTRACTS_SHEET_ID;
+const SHEET_ID = () => process.env.SCHEDULER_SHEET_ID;
 const RANGE    = "Meetings!A2:O";
 
 async function handler(event) {
