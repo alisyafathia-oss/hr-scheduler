@@ -48,5 +48,11 @@ const API = (() => {
 
     // Manual sync trigger (HR only)
     triggerSync: () => request('sync', { method: 'POST' }),
+
+    // People list (HR only)
+    people: () => request('people'),
+
+    // Skip meeting (silent cancel — no email)
+    skipMeeting: (meetingId) => request('meetings/skip', { method: 'POST', body: JSON.stringify({ meetingId }) }),
   };
 })();

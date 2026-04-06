@@ -316,6 +316,8 @@ function meetingToRow(m) {
 
 function rowToMeeting(row) {
   if (!row || row.length < 12) return null;
+  // Reject rows without a valid meeting ID and ISO date (filters template/header rows)
+  if (!row[0] || !/^\d{4}-\d{2}-\d{2}$/.test(String(row[7] || "").trim())) return null;
   return {
     id:              row[0],
     employeeId:      row[1],

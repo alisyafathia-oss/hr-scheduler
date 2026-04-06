@@ -151,11 +151,11 @@ function renderShell(session, activeNav, contentHtml) {
     <button class="nav-item ${activeNav === 'th-schedule' ? 'active' : ''}" data-nav="th-schedule">${Icon.calendar} Team Schedule</button>
   ` : '';
 
-  const empNav = `
+  const empNav = session.role !== 'hr_admin' ? `
     <span class="sidebar-section-label">My Meetings</span>
     <button class="nav-item ${activeNav === 'emp-schedule' ? 'active' : ''}" data-nav="emp-schedule">${Icon.calendar} My Schedule</button>
     <button class="nav-item ${activeNav === 'emp-book' ? 'active' : ''}" data-nav="emp-book">${Icon.clock} Book a Slot</button>
-  `;
+  ` : '';
 
   return `
     <div class="app-shell">

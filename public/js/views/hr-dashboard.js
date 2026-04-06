@@ -1,6 +1,5 @@
 // public/js/views/hr-dashboard.js
-// HR Admin dashboard — the most feature-rich view.
-// Tabs: Overview | Schedule | People | Votes
+// HR Admin dashboard — Overview | Schedule (grouped by employee) | People | Group Votes
 
 let hrState = { meetings: [], tab: 'overview', filter: 'all' };
 
@@ -20,22 +19,22 @@ async function renderHRDashboard(session) {
     </div>
   `);
 
-  // Nav wiring
+  // Sidebar nav wiring
   document.querySelectorAll('[data-nav]').forEach(btn => {
     btn.addEventListener('click', () => {
       const nav = btn.dataset.nav;
-      if (nav === 'hr-schedule') switchTab('schedule');
-      else if (nav === 'hr-votes') switchTab('votes');
-      else if (nav === 'home') switchTab('overview');
+      if      (nav === 'hr-schedule') switchTab('schedule');
+      else if (nav === 'hr-votes')    switchTab('votes');
+      else if (nav === 'hr-people')   switchTab('people');
+      else if (nav === 'home')        switchTab('overview');
     });
   });
 
-  // Tab switching
+  // Tab bar
   document.querySelectorAll('.tab').forEach(t => {
     t.addEventListener('click', () => switchTab(t.dataset.tab));
   });
 
-  // Load data and render
   try {
     const { meetings } = await API.meetings();
     hrState.meetings = meetings;
@@ -50,22 +49,24 @@ function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
   const content = document.getElementById('hr-tab-content');
   if (!content) return;
-  if (tab === 'overview')  content.innerHTML = renderHROverview();
-  if (tab === 'schedule')  content.innerHTML = renderHRSchedule();
-  if (tab === 'votes')     renderHRVotes(content);
-  attachHRHandlers(tab);
+  if (tab === 'overview') { content.innerHTML = renderHROverview(); attachHRHandlers(tab); }
+  if (tab === 'schedule') { content.innerHTML = renderHRSchedule(); attachHRHandlers(tab); }
+  if (tab === 'votes')    { renderHRVotes(content); }
+  if (tab === 'people')   { renderHRPeople(content); }
 }
 
+// ── Overview tab ──────────────────────────────────────────────────────────────
+
 function renderHROverview() {
-  const m = hrState.meetings;
+  const m     = hrState.meetings;
+  const today = new Date().toISOString().split('T')[0];
+  const in14  = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+
   const pending   = m.filter(x => x.status === 'pending').length;
   const booked    = m.filter(x => x.status === 'booked').length;
   const completed = m.filter(x => x.status === 'completed').length;
-  const cancelled = m.filter(x => x.status === 'cancelled').length;
+  const overdue   = m.filter(x => x.status === 'pending' && x.scheduledDate < today).length;
 
-  // Upcoming in next 14 days
-  const today = new Date().toISOString().split('T')[0];
-  const in14  = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
   const upcoming = m
     .filter(x => x.status === 'booked' && x.scheduledDate >= today && x.scheduledDate <= in14)
     .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))
@@ -79,86 +80,165 @@ function renderHROverview() {
   return `
     <div class="stats-grid">
       <div class="stat-card accent"><div class="stat-value">${m.length}</div><div class="stat-label">Total meetings</div></div>
-      <div class="stat-card"><div class="stat-value">${pending}</div><div class="stat-label">Pending booking</div></div>
-      <div class="stat-card"><div class="stat-value">${booked}</div><div class="stat-label">Booked</div></div>
+      <div class="stat-card"><div class="stat-value">${pending}</div><div class="stat-label">Pending</div></div>
+      <div class="stat-card"><div class="stat-value">${overdue}</div><div class="stat-label">Overdue</div></div>
       <div class="stat-card"><div class="stat-value">${completed}</div><div class="stat-label">Completed</div></div>
     </div>
-
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
       <div class="card">
-        <div class="card-title">Upcoming (next 14 days)</div>
-        ${upcoming.length === 0 ? `<div class="empty-state" style="padding:16px">${Icon.calendar}<p>Nothing booked yet</p></div>` :
-          upcoming.map(mtg => `
-            <div class="timeline-item">
-              <div class="timeline-date"><strong>${mtg.scheduledDate.slice(8)}</strong>${monthAbbr(mtg.scheduledDate)}</div>
-              <div class="timeline-info">
-                <div class="timeline-label">${mtg.label}</div>
-                <div class="timeline-meta">${mtg.employeeName}</div>
-              </div>
-              ${statusBadge(mtg.status)}
-            </div>`).join('')}
+        <div class="card-title">Upcoming booked (next 14 days)</div>
+        ${upcoming.length === 0
+          ? `<div class="empty-state" style="padding:16px">${Icon.calendar}<p>Nothing booked yet</p></div>`
+          : upcoming.map(mtg => `
+              <div class="timeline-item">
+                <div class="timeline-date"><strong>${mtg.scheduledDate.slice(8)}</strong>${monthAbbr(mtg.scheduledDate)}</div>
+                <div class="timeline-info">
+                  <div class="timeline-label">${mtg.label}</div>
+                  <div class="timeline-meta">${mtg.employeeName}</div>
+                </div>
+                ${statusBadge(mtg.status)}
+              </div>`).join('')}
       </div>
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <span class="card-title" style="margin:0">Needs booking</span>
           <button class="btn btn-primary btn-sm" id="sync-btn">${Icon.refresh} Sync now</button>
         </div>
-        ${pendingList.length === 0 ? `<div class="empty-state" style="padding:16px">${Icon.check}<p>All caught up!</p></div>` :
-          pendingList.map(mtg => `
-            <div class="timeline-item">
-              <div class="timeline-date"><strong>${mtg.scheduledDate.slice(8)}</strong>${monthAbbr(mtg.scheduledDate)}</div>
-              <div class="timeline-info">
-                <div class="timeline-label">${mtg.label}</div>
-                <div class="timeline-meta">${mtg.employeeName}</div>
-              </div>
-              <button class="btn btn-sm btn-secondary hr-agenda-btn" data-id="${mtg.id}" title="Generate agenda">${Icon.doc}</button>
-            </div>`).join('')}
+        ${pendingList.length === 0
+          ? `<div class="empty-state" style="padding:16px">${Icon.check}<p>All caught up!</p></div>`
+          : pendingList.map(mtg => `
+              <div class="timeline-item">
+                <div class="timeline-date"><strong>${mtg.scheduledDate.slice(8)}</strong>${monthAbbr(mtg.scheduledDate)}</div>
+                <div class="timeline-info">
+                  <div class="timeline-label">${mtg.label}</div>
+                  <div class="timeline-meta">${mtg.employeeName}</div>
+                </div>
+                <button class="btn btn-sm btn-secondary hr-agenda-btn" data-id="${mtg.id}" title="Agenda">${Icon.doc}</button>
+              </div>`).join('')}
       </div>
     </div>`;
 }
 
+// ── Schedule tab — grouped by employee ────────────────────────────────────────
+
 function renderHRSchedule() {
-  const f = hrState.filter;
-  const filtered = hrState.meetings.filter(m => f === 'all' || m.status === f);
-  const sorted   = [...filtered].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+  const f     = hrState.filter;
+  const today = new Date().toISOString().split('T')[0];
+
+  // Group meetings by employee
+  const byEmp = {};
+  hrState.meetings.forEach(m => {
+    if (!byEmp[m.employeeId]) {
+      byEmp[m.employeeId] = { id: m.employeeId, name: m.employeeName, email: m.employeeEmail, meetings: [] };
+    }
+    if (f === 'all' || m.status === f) byEmp[m.employeeId].meetings.push(m);
+  });
+
+  const employees = Object.values(byEmp)
+    .filter(e => e.meetings.length > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const totalShown = employees.reduce((s, e) => s + e.meetings.length, 0);
 
   return `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <span style="font-size:13px;color:var(--ink-3)">Filter:</span>
       ${['all','pending','booked','completed','cancelled'].map(s =>
-        `<button class="btn btn-sm ${f === s ? 'btn-primary' : 'btn-secondary'} filter-btn" data-filter="${s}">${s.charAt(0).toUpperCase() + s.slice(1)}</button>`
+        `<button class="btn btn-sm ${f === s ? 'btn-primary' : 'btn-secondary'} filter-btn" data-filter="${s}">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`
       ).join('')}
-      <span style="margin-left:auto;font-size:13px;color:var(--ink-3)">${filtered.length} meetings</span>
+      <span style="margin-left:auto;font-size:13px;color:var(--ink-3)">${employees.length} employees · ${totalShown} meetings</span>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr>
-          <th>Date</th><th>Meeting</th><th>Employee</th><th>Status</th><th>Actions</th>
-        </tr></thead>
-        <tbody>
-          ${sorted.length === 0 ? `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--ink-3)">No meetings found</td></tr>` :
-            sorted.map(m => `
-              <tr>
-                <td class="td-mono">${fmtDate(m.scheduledDate)}</td>
-                <td class="td-name">${m.label}</td>
-                <td>${m.employeeName}<br/><span class="td-mono">${m.employeeEmail}</span></td>
-                <td>${statusBadge(m.status)}</td>
-                <td>
-                  <div style="display:flex;gap:6px">
-                    <button class="btn btn-sm btn-secondary hr-agenda-btn" data-id="${m.id}" title="Agenda">${Icon.doc}</button>
-                    ${m.status === 'booked' ? `<button class="btn btn-sm btn-secondary hr-complete-btn" data-id="${m.id}" title="Mark complete">${Icon.check}</button>` : ''}
-                    ${['pending','booked'].includes(m.status) ? `<button class="btn btn-sm btn-danger hr-cancel-btn" data-id="${m.id}" title="Cancel">${Icon.x}</button>` : ''}
-                  </div>
-                </td>
-              </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`;
+    ${employees.length === 0
+      ? `<div class="empty-state">${Icon.calendar}<p>No meetings found</p></div>`
+      : employees.map(emp => {
+          const sorted  = [...emp.meetings].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+          const overdue = sorted.filter(m => m.status === 'pending' && m.scheduledDate < today).length;
+          const pending = sorted.filter(m => m.status === 'pending').length;
+          return `
+            <div class="card" style="margin-bottom:10px;padding:0;overflow:hidden">
+              <div style="padding:12px 16px;display:flex;align-items:center;cursor:pointer;justify-content:space-between" data-emp-toggle="${emp.id}">
+                <div>
+                  <span style="font-weight:600;font-size:14px">${emp.name}</span>
+                  <span style="color:var(--ink-3);font-size:12px;margin-left:8px">${emp.id}</span>
+                  <div style="font-size:12px;color:var(--ink-3)">${emp.email || ''}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  ${overdue > 0 ? `<span class="badge badge-cancelled">${overdue} overdue</span>` : ''}
+                  <span class="badge badge-pending">${pending} pending</span>
+                  <span style="font-size:12px;color:var(--ink-3)">${sorted.length} total</span>
+                  <span id="chev-${emp.id}" style="font-size:13px;color:var(--ink-3)">▼</span>
+                </div>
+              </div>
+              <div id="emp-detail-${emp.id}" style="display:none;border-top:1px solid var(--border)">
+                <table style="width:100%">
+                  <thead><tr style="background:var(--surface-2)">
+                    <th style="padding:7px 16px;text-align:left;font-size:12px;color:var(--ink-3);font-weight:500">Date</th>
+                    <th style="padding:7px 16px;text-align:left;font-size:12px;color:var(--ink-3);font-weight:500">Meeting</th>
+                    <th style="padding:7px 16px;text-align:left;font-size:12px;color:var(--ink-3);font-weight:500">Status</th>
+                    <th style="padding:7px 16px;text-align:left;font-size:12px;color:var(--ink-3);font-weight:500">Actions</th>
+                  </tr></thead>
+                  <tbody>
+                    ${sorted.map(m => `
+                      <tr style="border-top:1px solid var(--border)">
+                        <td style="padding:7px 16px;font-size:13px;font-family:monospace;color:${m.status==='pending'&&m.scheduledDate<today?'var(--red)':'inherit'};white-space:nowrap">${fmtDate(m.scheduledDate)}</td>
+                        <td style="padding:7px 16px;font-size:13px">${m.label}</td>
+                        <td style="padding:7px 16px">${statusBadge(m.status)}</td>
+                        <td style="padding:7px 16px">
+                          <div style="display:flex;gap:4px;flex-wrap:wrap">
+                            <button class="btn btn-sm btn-secondary hr-agenda-btn" data-id="${m.id}" title="Agenda">${Icon.doc}</button>
+                            ${['pending','booked'].includes(m.status) ? `
+                              <button class="btn btn-sm btn-primary hr-done-btn" data-id="${m.id}">${Icon.check} Done</button>
+                              <button class="btn btn-sm btn-secondary hr-skip-btn" data-id="${m.id}">${Icon.x} Skip</button>
+                            ` : ''}
+                          </div>
+                        </td>
+                      </tr>`).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>`;
+        }).join('')}`;
 }
 
+// ── People tab ────────────────────────────────────────────────────────────────
+
+async function renderHRPeople(container) {
+  container.innerHTML = `<div class="empty-state">${Icon.users}<p>Loading people…</p></div>`;
+  try {
+    const { people } = await API.people();
+    const sorted = [...people].sort((a, b) => a.name.localeCompare(b.name));
+    const roleColor = { hr_admin: 'booked', team_head: 'pending', employee: 'completed' };
+    container.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <span style="font-size:18px;font-weight:600">All Employees</span>
+        <span style="font-size:13px;color:var(--ink-3)">${sorted.length} people</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>ID</th><th>Name</th><th>Type</th><th>Designation</th><th>Work Email</th><th>Role</th>
+          </tr></thead>
+          <tbody>
+            ${sorted.map(p => `
+              <tr>
+                <td class="td-mono">${p.id}</td>
+                <td class="td-name">${p.name}</td>
+                <td>${p.employmentType || '—'}</td>
+                <td>${p.designation || '—'}</td>
+                <td class="td-mono" style="font-size:12px">${p.workEmail || '—'}</td>
+                <td><span class="badge badge-${roleColor[p.role] || 'completed'}">${(p.role||'employee').replace('_',' ')}</span></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    container.innerHTML = `<div class="empty-state"><p style="color:var(--red)">Failed to load: ${e.message}</p></div>`;
+  }
+}
+
+// ── Votes tab ─────────────────────────────────────────────────────────────────
+
 async function renderHRVotes(container) {
-  container.innerHTML = `<div class="empty-state">${Icon.vote}<p>Loading votes…</p></div>`;
-  // Votes UI — start a new group vote
   container.innerHTML = `
     <div class="card" style="max-width:560px">
       <div class="card-title">Start a group vote</div>
@@ -185,7 +265,7 @@ async function renderHRVotes(container) {
 
   container.querySelector('#add-slot-btn').addEventListener('click', () => {
     const list = container.querySelector('#vote-slots-list');
-    const row = document.createElement('div');
+    const row  = document.createElement('div');
     row.className = 'form-row vote-slot-row';
     row.innerHTML = `<input class="form-input" placeholder="2025-06-15" name="slot-date" /><input class="form-input" placeholder="10:00" name="slot-time" />`;
     list.appendChild(row);
@@ -193,14 +273,12 @@ async function renderHRVotes(container) {
 
   container.querySelector('#start-vote-btn').addEventListener('click', async (e) => {
     setLoading(e.target, true);
-    const meetingId = container.querySelector('#vote-meeting-id').value.trim();
+    const meetingId   = container.querySelector('#vote-meeting-id').value.trim();
     const voterEmails = container.querySelector('#vote-emails').value.trim().split('\n').map(s => s.trim()).filter(Boolean);
-    const slotRows = container.querySelectorAll('.vote-slot-row');
-    const slots = Array.from(slotRows).map(r => ({
-      date: r.querySelector('[name="slot-date"]').value.trim(),
+    const slots = Array.from(container.querySelectorAll('.vote-slot-row')).map(r => ({
+      date:      r.querySelector('[name="slot-date"]').value.trim(),
       startTime: r.querySelector('[name="slot-time"]').value.trim(),
     })).filter(s => s.date && s.startTime);
-
     if (!meetingId || voterEmails.length === 0 || slots.length === 0) {
       Toast.error('Please fill in all fields'); setLoading(e.target, false); return;
     }
@@ -212,8 +290,10 @@ async function renderHRVotes(container) {
   });
 }
 
+// ── Event handlers ────────────────────────────────────────────────────────────
+
 function attachHRHandlers(tab) {
-  // Sync button
+  // Sync button (overview)
   document.getElementById('sync-btn')?.addEventListener('click', async (e) => {
     setLoading(e.target, true);
     try {
@@ -226,9 +306,22 @@ function attachHRHandlers(tab) {
     setLoading(e.target, false);
   });
 
-  // Filter buttons
+  // Filter buttons (schedule)
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => { hrState.filter = btn.dataset.filter; switchTab('schedule'); });
+  });
+
+  // Expand/collapse employee rows (schedule)
+  document.querySelectorAll('[data-emp-toggle]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id     = el.dataset.empToggle;
+      const detail = document.getElementById(`emp-detail-${id}`);
+      const chev   = document.getElementById(`chev-${id}`);
+      if (!detail) return;
+      const open = detail.style.display === 'none';
+      detail.style.display = open ? 'block' : 'none';
+      if (chev) chev.textContent = open ? '▲' : '▼';
+    });
   });
 
   // Agenda buttons
@@ -236,39 +329,67 @@ function attachHRHandlers(tab) {
     btn.addEventListener('click', () => showAgendaModal(btn.dataset.id));
   });
 
-  // Cancel buttons
-  document.querySelectorAll('.hr-cancel-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const mtg = hrState.meetings.find(m => m.id === btn.dataset.id);
-      const ok = await confirm(`Cancel "${mtg?.label}" for ${mtg?.employeeName}? An email will be sent.`, 'Cancel meeting', true);
+  // Done buttons (mark completed)
+  document.querySelectorAll('.hr-done-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const ok = await confirm('Mark this meeting as done / completed?', 'Mark done');
       if (!ok) return;
+      setLoading(e.target, true);
       try {
-        await API.cancelMeeting(btn.dataset.id);
-        hrState.meetings = hrState.meetings.map(m => m.id === btn.dataset.id ? { ...m, status: 'cancelled' } : m);
-        Toast.success('Meeting cancelled');
+        await API.completeMeeting(btn.dataset.id);
+        hrState.meetings = hrState.meetings.map(m =>
+          m.id === btn.dataset.id ? { ...m, status: 'completed' } : m
+        );
+        Toast.success('Marked as done');
         switchTab(hrState.tab);
       } catch (err) { Toast.error(err.message); }
+      setLoading(e.target, false);
     });
   });
 
-  // Complete buttons
-  document.querySelectorAll('.hr-complete-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
+  // Skip buttons (silent cancel — no email)
+  document.querySelectorAll('.hr-skip-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const ok = await confirm('Skip this meeting? It will be marked cancelled with no email sent.', 'Skip', true);
+      if (!ok) return;
+      setLoading(e.target, true);
       try {
-        await API.completeMeeting(btn.dataset.id);
-        hrState.meetings = hrState.meetings.map(m => m.id === btn.dataset.id ? { ...m, status: 'completed' } : m);
-        Toast.success('Marked as completed');
+        await API.skipMeeting(btn.dataset.id);
+        hrState.meetings = hrState.meetings.map(m =>
+          m.id === btn.dataset.id ? { ...m, status: 'cancelled' } : m
+        );
+        Toast.success('Meeting skipped');
+        switchTab(hrState.tab);
+      } catch (err) { Toast.error(err.message); }
+      setLoading(e.target, false);
+    });
+  });
+
+  // Legacy cancel buttons (sends email) — kept for overview tab
+  document.querySelectorAll('.hr-cancel-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const mtg = hrState.meetings.find(m => m.id === btn.dataset.id);
+      const ok  = await confirm(`Cancel "${mtg?.label}" for ${mtg?.employeeName}? A cancellation email will be sent.`, 'Cancel meeting', true);
+      if (!ok) return;
+      try {
+        await API.cancelMeeting(btn.dataset.id);
+        hrState.meetings = hrState.meetings.map(m =>
+          m.id === btn.dataset.id ? { ...m, status: 'cancelled' } : m
+        );
+        Toast.success('Meeting cancelled');
         switchTab(hrState.tab);
       } catch (err) { Toast.error(err.message); }
     });
   });
 }
 
+// ── Agenda modal ──────────────────────────────────────────────────────────────
+
 async function showAgendaModal(meetingId) {
   const modal = showModal({
     title: 'Meeting agenda',
-    body: `<div class="empty-state">${Icon.doc}<p>Generating agenda…</p></div>`,
-    wide: true,
+    body:  `<div class="empty-state">${Icon.doc}<p>Generating agenda…</p></div>`,
+    wide:  true,
   });
 
   try {
@@ -293,7 +414,7 @@ async function showAgendaModal(meetingId) {
         ${sectionsHtml}
         ${agenda.closingNote ? `<div class="agenda-closing">${agenda.closingNote}</div>` : ''}
       </div>
-      <button class="btn btn-secondary btn-sm agenda-copy-btn" id="agenda-copy">
+      <button class="btn btn-secondary btn-sm" id="agenda-copy">
         ${Icon.copy} Copy as plain text
       </button>`);
 

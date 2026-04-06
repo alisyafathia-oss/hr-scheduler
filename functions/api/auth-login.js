@@ -102,24 +102,30 @@ async function handler(event) {
       const idCol     = hIdx["employee_id"] ?? 0;
       const activeCol = hIdx["is_active"]   ?? 4;
 
+      // Merge HR Roles + People_Master so any listed employee can log in
+      const peopleIndex = buildPeopleIndex(pmRows, pmHeader, hrRows, hrHeader);
+      const person      = peopleIndex[empId];
+
       const roleRow = hrRows.find(
         (r) => (r[idCol] || "").trim().toUpperCase() === empId
       );
 
-      if (!roleRow) {
+      // Must be found in at least one of HR Roles or People_Master
+      if (!roleRow && !person) {
         return json({
           error: "Employee ID not found. Contact HR if you believe this is an error.",
         }, 401);
       }
 
-      const isActive = (roleRow[activeCol] || "TRUE").toUpperCase() !== "FALSE";
-      if (!isActive) {
-        return json({ error: "Your account has been deactivated. Contact HR." }, 403);
+      // Respect Is_Active flag when the employee is in the HR Roles tab
+      if (roleRow) {
+        const isActive = (roleRow[activeCol] || "TRUE").toUpperCase() !== "FALSE";
+        if (!isActive) {
+          return json({ error: "Your account has been deactivated. Contact HR." }, 403);
+        }
       }
 
-      const peopleIndex = buildPeopleIndex(pmRows, pmHeader, hrRows, hrHeader);
-      const person      = peopleIndex[empId];
-      const role        = detectRole(empId, peopleIndex);
+      const role = detectRole(empId, peopleIndex);
 
       if (role === "hr_admin") {
         return json({
