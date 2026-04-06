@@ -20,8 +20,8 @@ async function handler(event) {
 
   try {
     const [[pmHeader], pmRows, [hrHeader], hrRows] = await Promise.all([
-      readSheet(process.env.PEOPLE_MASTER_SHEET_ID, "People_Master!A1:H1"),
-      readSheet(process.env.PEOPLE_MASTER_SHEET_ID, "People_Master!A2:H"),
+      readSheet(process.env.PEOPLE_MASTER_SHEET_ID, "People_Master!A1:AE1"),
+      readSheet(process.env.PEOPLE_MASTER_SHEET_ID, "People_Master!A2:AE"),
       readSheet(process.env.SCHEDULER_SHEET_ID, "HR Roles!A1:G1"),
       readSheet(process.env.SCHEDULER_SHEET_ID, "HR Roles!A2:G"),
     ]);
