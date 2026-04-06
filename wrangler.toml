@@ -27,11 +27,11 @@ pages_build_output_dir = "public"
 # Secrets (private key, passwords, session secret) must be set via
 # the Cloudflare Pages dashboard → Settings → Environment variables.
 [vars]
-APP_URL                  = "https://hr-scheduler.pages.dev"
+APP_URL                  = "https://hr-scheduler.crht-admin-pages.dev"
 VOTE_WINDOW_HOURS        = "24"
 GOOGLE_SERVICE_ACCOUNT_EMAIL = "hr-scheduler-sa@hr-scheduler-492002.iam.gserviceaccount.com"
 CONTRACTS_SHEET_ID       = "1zViTedoHHJ9aXtc6VaatO2vIBcwrIVAb_MO4EY3oKms"
 PEOPLE_MASTER_SHEET_ID   = "1Z3enMrx1ET9xH7wZ3HEGxNUnC91GC3fz-M7JiZIGcSo"
-SCHEDULER_SHEET_ID       = "1BzQKTNzQ1YebiQ6ebG-nlsEkYxTqe2qC"
+SCHEDULER_SHEET_ID       = "1ML4SDX-I_rlgfXUqNUBenBkFbEgprdjy8tJ9pV0W5fw"
 HR_CALENDAR_ID           = "gtoljnr0h7r8opu97mfm7ukalg@group.calendar.google.com"
 HR_ADMIN_EMAILS          = "hradmin@crescentrating.com"
