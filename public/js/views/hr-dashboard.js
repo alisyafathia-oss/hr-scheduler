@@ -127,6 +127,16 @@ function renderHROverview() {
 function renderHRSchedule() {
   const f     = hrState.filter;
   const today = new Date().toISOString().split('T')[0];
+  const m     = hrState.meetings;
+
+  const counts = {
+    total:     m.length,
+    pending:   m.filter(x => x.status === 'pending').length,
+    overdue:   m.filter(x => x.status === 'pending' && x.scheduledDate < today).length,
+    booked:    m.filter(x => x.status === 'booked').length,
+    completed: m.filter(x => x.status === 'completed').length,
+    cancelled: m.filter(x => x.status === 'cancelled').length,
+  };
 
   // Group meetings by employee
   const byEmp = {};
@@ -145,6 +155,14 @@ function renderHRSchedule() {
   const totalShown = employees.reduce((s, e) => s + e.meetings.length, 0);
 
   return `
+    <div class="stats-grid" style="margin-bottom:16px">
+      <div class="stat-card accent"><div class="stat-value">${counts.total}</div><div class="stat-label">Total</div></div>
+      <div class="stat-card"><div class="stat-value">${counts.pending}</div><div class="stat-label">Pending</div></div>
+      <div class="stat-card"><div class="stat-value">${counts.overdue}</div><div class="stat-label">Overdue</div></div>
+      <div class="stat-card"><div class="stat-value">${counts.booked}</div><div class="stat-label">Booked</div></div>
+      <div class="stat-card"><div class="stat-value">${counts.completed}</div><div class="stat-label">Completed</div></div>
+      <div class="stat-card"><div class="stat-value">${counts.cancelled}</div><div class="stat-label">Cancelled</div></div>
+    </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <span style="font-size:13px;color:var(--ink-3)">Filter:</span>
       ${['all','overdue','pending','booked','completed','cancelled'].map(s =>

@@ -70,6 +70,8 @@ function showModal({ title, body, footer, onClose, wide = false }) {
 // ── Confirm dialog ───────────────────────────────────────────────────────
 function confirm(message, action, danger = false) {
   return new Promise((resolve) => {
+    let settled = false;
+    const settle = (val) => { if (!settled) { settled = true; resolve(val); } };
     const modal = showModal({
       title: 'Confirm action',
       body: `<p style="color:var(--ink-2)">${message}</p>`,
@@ -77,10 +79,10 @@ function confirm(message, action, danger = false) {
         <button class="btn btn-secondary" id="confirm-cancel">Cancel</button>
         <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" id="confirm-ok">${action}</button>
       `,
-      onClose: () => resolve(false),
+      onClose: () => settle(false),
     });
-    modal.find('#confirm-cancel').addEventListener('click', () => { modal.close(); resolve(false); });
-    modal.find('#confirm-ok').addEventListener('click',    () => { modal.close(); resolve(true);  });
+    modal.find('#confirm-cancel').addEventListener('click', () => { settle(false); modal.close(); });
+    modal.find('#confirm-ok').addEventListener('click',    () => { settle(true);  modal.close(); });
   });
 }
 

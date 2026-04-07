@@ -48,7 +48,9 @@ async function handler(event) {
     // GET /api/slots — list
     if (method === "GET" && !action) {
       const rows = await readSheet(SHEET_ID(), SLOTS_RANGE);
-      let slots  = rows.map(rowToSlot).filter(Boolean);
+      let slots  = rows.map(rowToSlot).filter(Boolean)
+                       .filter(s => s.id && s.id.trim() && s.status !== 'deleted'
+                                 && s.date && s.startTime && s.endTime);
 
       const { status, teamHeadEmail, date } = event.queryStringParameters || {};
       if (status)        slots = slots.filter((s) => s.status === status);
