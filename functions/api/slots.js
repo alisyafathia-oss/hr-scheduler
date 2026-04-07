@@ -24,11 +24,22 @@ function slotToRow(s) {
   return [s.id, s.meetingId || "", s.teamHeadEmail, s.date, s.startTime, s.endTime,
           s.status || "available", s.bookedBy || "", s.calendarEventId || "", s.createdAt];
 }
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const HH_MM    = /^\d{2}:\d{2}$/;
+
 function rowToSlot(row) {
   if (!row || row.length < 6) return null;
-  return { id: row[0], meetingId: row[1], teamHeadEmail: row[2], date: row[3],
-           startTime: row[4], endTime: row[5], status: row[6] || "available",
-           bookedBy: row[7] || null, calendarEventId: row[8] || null, createdAt: row[9] };
+  const id        = String(row[0] || "").trim();
+  const date      = String(row[3] || "").trim();
+  const startTime = String(row[4] || "").trim();
+  const endTime   = String(row[5] || "").trim();
+  // Reject header/template/deleted rows — must have real id, ISO date, HH:MM times
+  if (!id || !ISO_DATE.test(date) || !HH_MM.test(startTime) || !HH_MM.test(endTime)) return null;
+  const status = String(row[6] || "available").trim();
+  if (status === "deleted") return null;
+  return { id, meetingId: row[1] || "", teamHeadEmail: String(row[2] || "").trim(),
+           date, startTime, endTime, status,
+           bookedBy: row[7] || null, calendarEventId: row[8] || null, createdAt: row[9] || "" };
 }
 
 async function handler(event) {
@@ -48,9 +59,7 @@ async function handler(event) {
     // GET /api/slots — list
     if (method === "GET" && !action) {
       const rows = await readSheet(SHEET_ID(), SLOTS_RANGE);
-      let slots  = rows.map(rowToSlot).filter(Boolean)
-                       .filter(s => s.id && s.id.trim() && s.status !== 'deleted'
-                                 && s.date && s.startTime && s.endTime);
+      let slots  = rows.map(rowToSlot).filter(Boolean); // rowToSlot already rejects junk/deleted rows
 
       const { status, teamHeadEmail, date } = event.queryStringParameters || {};
       if (status)        slots = slots.filter((s) => s.status === status);

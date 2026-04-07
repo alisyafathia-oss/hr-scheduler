@@ -107,6 +107,7 @@ function renderEmpSchedule(meetings, session) {
 }
 
 function renderBookingView(slots, pendingMeetings) {
+  // Show slots pane with instruction until a meeting is selected
   return `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
       <div class="card">
@@ -114,7 +115,8 @@ function renderBookingView(slots, pendingMeetings) {
         ${pendingMeetings.length === 0
           ? `<p style="font-size:13px;color:var(--ink-3)">No pending meetings to book.</p>`
           : pendingMeetings.map(m => `
-              <div class="timeline-item ${empState.selectedMeeting === m.id ? 'selected' : ''}" style="cursor:pointer;margin-bottom:6px" data-meeting-id="${m.id}">
+              <div class="timeline-item" style="cursor:pointer;margin-bottom:6px"
+                   data-meeting-id="${m.id}" data-manager="${m.managerEmail || ''}">
                 <div class="timeline-info">
                   <div class="timeline-label">${m.label}</div>
                   <div class="timeline-meta">${fmtDate(m.scheduledDate)} · ${m.durationMins} min</div>
@@ -123,39 +125,59 @@ function renderBookingView(slots, pendingMeetings) {
       </div>
       <div class="card">
         <div class="card-title">2. Choose a slot</div>
-        ${slots.length === 0
-          ? `<p style="font-size:13px;color:var(--ink-3)">No slots available yet. Check back later or contact HR.</p>`
-          : `<div class="slot-grid" id="slot-grid">
-              ${slots.map(s => `
-                <div class="slot-card" data-slot-id="${s.id}">
-                  <div class="slot-date">${fmtDate(s.date)}</div>
-                  <div class="slot-time">${s.startTime} – ${s.endTime}</div>
-                </div>`).join('')}
-            </div>
-            <button class="btn btn-primary" style="margin-top:16px;width:100%" id="confirm-booking-btn" disabled>Confirm booking</button>`}
+        <div id="slot-grid">
+          <p style="font-size:13px;color:var(--ink-3)">Select a meeting first to see available slots from your team head.</p>
+        </div>
+        <button class="btn btn-primary" style="margin-top:16px;width:100%" id="confirm-booking-btn" disabled>Confirm booking</button>
       </div>
     </div>`;
 }
 
 function attachBookingHandlers(content, session) {
-  let selectedMeeting = null;
-  let selectedSlot    = null;
+  let selectedMeeting    = null;
+  let selectedSlot       = null;
+  let selectedManagerEmail = null;
+
+  // All available slots (fetched once)
+  const allSlots = empState.slots || [];
+
+  function renderSlotGrid(managerEmail) {
+    const grid = content.querySelector('#slot-grid');
+    if (!grid) return;
+    const filtered = allSlots.filter(s => !managerEmail || s.teamHeadEmail === managerEmail);
+    if (!filtered.length) {
+      grid.innerHTML = `<p style="font-size:13px;color:var(--ink-3)">No available slots from your team head yet. Check back later or contact HR.</p>`;
+      return;
+    }
+    grid.innerHTML = `
+      <div class="slot-grid-inner">
+        ${filtered.map(s => `
+          <div class="slot-card" data-slot-id="${s.id}">
+            <div class="slot-date">${fmtDate(s.date)}</div>
+            <div class="slot-time">${s.startTime} – ${s.endTime}</div>
+          </div>`).join('')}
+      </div>`;
+    grid.querySelectorAll('.slot-card').forEach(card => {
+      card.addEventListener('click', () => {
+        grid.querySelectorAll('.slot-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedSlot = card.dataset.slotId;
+        checkReady();
+      });
+    });
+  }
 
   content.querySelectorAll('[data-meeting-id]').forEach(el => {
     el.addEventListener('click', () => {
-      content.querySelectorAll('[data-meeting-id]').forEach(x => x.style.borderColor = '');
+      content.querySelectorAll('[data-meeting-id]').forEach(x => {
+        x.style.borderColor = ''; x.style.background = '';
+      });
       el.style.borderColor = 'var(--teal)';
       el.style.background  = 'var(--teal-light)';
-      selectedMeeting = el.dataset.meetingId;
-      checkReady();
-    });
-  });
-
-  content.querySelectorAll('.slot-card').forEach(card => {
-    card.addEventListener('click', () => {
-      content.querySelectorAll('.slot-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      selectedSlot = card.dataset.slotId;
+      selectedMeeting      = el.dataset.meetingId;
+      selectedManagerEmail = el.dataset.manager || '';
+      selectedSlot         = null;
+      renderSlotGrid(selectedManagerEmail);
       checkReady();
     });
   });
