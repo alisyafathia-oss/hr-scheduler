@@ -45,11 +45,12 @@ async function handler(event) {
     const meetings = await getAllMeetings();
     let filtered = meetings;
 
+    const userEmail = session.workEmail || session.email || "";
     if (session.role === "employee") {
-      filtered = meetings.filter((m) => m.employeeEmail === session.email);
+      filtered = meetings.filter((m) => m.employeeEmail === userEmail);
     } else if (session.role === "team_head") {
       filtered = meetings.filter(
-        (m) => m.employeeEmail === session.email || m.managerEmail === session.email
+        (m) => m.employeeEmail === userEmail || m.managerEmail === userEmail
       );
     }
 

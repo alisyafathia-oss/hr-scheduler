@@ -126,7 +126,7 @@ async function handler(event) {
       if (!date || !startTime || !endTime) return json({ error: "date, startTime, endTime required" }, 400);
 
       const id   = `slot_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-      const slot = { id, meetingId: meetingId || "", teamHeadEmail: session.email,
+      const slot = { id, meetingId: meetingId || "", teamHeadEmail: session.workEmail || session.email,
                      date, startTime, endTime, status: "available",
                      bookedBy: null, calendarEventId: null, createdAt: new Date().toISOString() };
 
@@ -172,7 +172,7 @@ async function handler(event) {
       }
 
       const slotRowNum  = slotIdx + 2;
-      const updatedSlot = { ...slot, status: "booked", bookedBy: session.email, calendarEventId: calEventId };
+      const updatedSlot = { ...slot, status: "booked", bookedBy: session.workEmail || session.email, calendarEventId: calEventId };
       await writeSheet(SHEET_ID(), `Slots!A${slotRowNum}:J${slotRowNum}`, [slotToRow(updatedSlot)]);
 
       const meetRowNum = meetIdx + 2;

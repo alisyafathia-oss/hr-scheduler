@@ -72,10 +72,11 @@ async function handler(event) {
     if (!vote) return json({ error: "Invalid vote record" }, 500);
     if (vote.status !== "open") return json({ error: "Voting is closed" }, 400);
     if (isAfter(new Date(), parseISO(vote.deadline))) return json({ error: "Voting deadline passed" }, 400);
-    if (!vote.voters.includes(session.email)) return json({ error: "You are not a voter in this session" }, 403);
+    const voterEmail = session.workEmail || session.email || "";
+    if (!vote.voters.includes(voterEmail)) return json({ error: "You are not a voter in this session" }, 403);
     if (!vote.slots.find((s) => s.id === slotId)) return json({ error: "Invalid slot" }, 400);
 
-    vote.votes[session.email] = slotId;
+    vote.votes[voterEmail] = slotId;
 
     const allVoted = vote.voters.every((v) => vote.votes[v]);
     if (allVoted) {

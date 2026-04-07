@@ -65,7 +65,7 @@ async function handler(event) {
 
     vote.status     = "resolved";
     vote.winnerId   = slotId;
-    vote.resolvedBy = session.email;
+    vote.resolvedBy = session.workEmail || session.email;
 
     const rowNum = voteIdx + 2;
     await writeSheet(SHEET_ID(), `Votes!A${rowNum}:L${rowNum}`, [voteToRow(vote)]);

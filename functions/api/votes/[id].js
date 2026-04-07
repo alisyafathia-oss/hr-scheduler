@@ -62,7 +62,7 @@ async function handler(event, voteId) {
 
     const vote   = rowToVote(voteRow);
     const tally  = tallyVotes(vote.votes, vote.slots);
-    const myVote = vote.votes[session.email] || null;
+    const myVote = vote.votes[session.workEmail || session.email] || null;
 
     return json({ vote, tally, myVote, hasVoted: !!myVote });
   } catch (err) {
