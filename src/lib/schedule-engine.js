@@ -43,10 +43,27 @@ function parseDate(value) {
   if (value instanceof Date) return startOfDay(value);
   const s = String(value).trim();
   if (!s) return null;
+
+  // Google Sheets date serial number (days since 30 Dec 1899)
+  if (/^\d+(\.\d+)?$/.test(s)) {
+    const serial = parseFloat(s);
+    if (serial > 1 && serial < 100000) {
+      const epoch = new Date(1899, 11, 30);
+      epoch.setDate(epoch.getDate() + Math.floor(serial));
+      return isNaN(epoch.getTime()) ? null : startOfDay(epoch);
+    }
+  }
+
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return startOfDay(parseISO(s));
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
     const [d, m, y] = s.split("/");
     return startOfDay(new Date(+y, +m - 1, +d));
+  }
+  // DD-MM-YYYY or DD/MM/YYYY with 2-digit year variants
+  if (/^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}$/.test(s)) {
+    const parts = s.split(/[-/]/);
+    if (parts[2].length <= 2) parts[2] = "20" + parts[2];
+    return startOfDay(new Date(+parts[2], +parts[1] - 1, +parts[0]));
   }
   const d = new Date(s);
   return isNaN(d.getTime()) ? null : startOfDay(d);

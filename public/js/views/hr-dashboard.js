@@ -1,8 +1,8 @@
 // public/js/views/hr-dashboard.js
 // HR Admin dashboard — the most feature-rich view.
-// Tabs: Overview | Schedule | People | Votes
+// Tabs: Overview | Schedule | People | Slots | Votes
 
-let hrState = { meetings: [], tab: 'overview', filter: 'all' };
+let hrState = { meetings: [], slots: [], people: [], tab: 'overview', filter: 'all' };
 
 async function renderHRDashboard(session) {
   document.getElementById('app').innerHTML = renderShell(session, 'home', `
@@ -13,6 +13,8 @@ async function renderHRDashboard(session) {
     <div class="tab-bar">
       <button class="tab active" data-tab="overview">Overview</button>
       <button class="tab" data-tab="schedule">Schedule</button>
+      <button class="tab" data-tab="people">People</button>
+      <button class="tab" data-tab="slots">Slots</button>
       <button class="tab" data-tab="votes">Group Votes</button>
     </div>
     <div id="hr-tab-content">
@@ -26,6 +28,7 @@ async function renderHRDashboard(session) {
       const nav = btn.dataset.nav;
       if (nav === 'hr-schedule') switchTab('schedule');
       else if (nav === 'hr-votes') switchTab('votes');
+      else if (nav === 'hr-people') switchTab('people');
       else if (nav === 'home') switchTab('overview');
     });
   });
@@ -53,12 +56,16 @@ function switchTab(tab) {
   if (tab === 'overview')  content.innerHTML = renderHROverview();
   if (tab === 'schedule')  content.innerHTML = renderHRSchedule();
   if (tab === 'votes')     renderHRVotes(content);
+  if (tab === 'people')    renderHRPeople(content);
+  if (tab === 'slots')     renderHRSlotsTab(content);
   attachHRHandlers(tab);
 }
 
 function renderHROverview() {
   const m = hrState.meetings;
-  const pending   = m.filter(x => x.status === 'pending').length;
+  const today = new Date().toISOString().split('T')[0];
+  const pending   = m.filter(x => x.status === 'pending' && x.scheduledDate >= today).length;
+  const overdue   = m.filter(x => x.status === 'pending' && x.scheduledDate < today).length;
   const booked    = m.filter(x => x.status === 'booked').length;
   const completed = m.filter(x => x.status === 'completed').length;
   const cancelled = m.filter(x => x.status === 'cancelled').length;
@@ -80,7 +87,7 @@ function renderHROverview() {
     <div class="stats-grid">
       <div class="stat-card accent"><div class="stat-value">${m.length}</div><div class="stat-label">Total meetings</div></div>
       <div class="stat-card"><div class="stat-value">${pending}</div><div class="stat-label">Pending booking</div></div>
-      <div class="stat-card"><div class="stat-value">${booked}</div><div class="stat-label">Booked</div></div>
+      ${overdue > 0 ? `<div class="stat-card" style="border-left:3px solid #c2410c"><div class="stat-value" style="color:#c2410c">${overdue}</div><div class="stat-label">Overdue</div></div>` : `<div class="stat-card"><div class="stat-value">${booked}</div><div class="stat-label">Booked</div></div>`}
       <div class="stat-card"><div class="stat-value">${completed}</div><div class="stat-label">Completed</div></div>
     </div>
 
@@ -119,13 +126,18 @@ function renderHROverview() {
 
 function renderHRSchedule() {
   const f = hrState.filter;
-  const filtered = hrState.meetings.filter(m => f === 'all' || m.status === f);
-  const sorted   = [...filtered].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+  const today = new Date().toISOString().split('T')[0];
+  const filtered = hrState.meetings.filter(m => {
+    if (f === 'all') return true;
+    if (f === 'overdue') return m.status === 'pending' && m.scheduledDate < today;
+    return m.status === f;
+  });
+  const sorted = [...filtered].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
 
   return `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <span style="font-size:13px;color:var(--ink-3)">Filter:</span>
-      ${['all','pending','booked','completed','cancelled'].map(s =>
+      ${['all','overdue','pending','booked','completed','cancelled'].map(s =>
         `<button class="btn btn-sm ${f === s ? 'btn-primary' : 'btn-secondary'} filter-btn" data-filter="${s}">${s.charAt(0).toUpperCase() + s.slice(1)}</button>`
       ).join('')}
       <span style="margin-left:auto;font-size:13px;color:var(--ink-3)">${filtered.length} meetings</span>
@@ -137,12 +149,14 @@ function renderHRSchedule() {
         </tr></thead>
         <tbody>
           ${sorted.length === 0 ? `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--ink-3)">No meetings found</td></tr>` :
-            sorted.map(m => `
+            sorted.map(m => {
+              const eff = effectiveStatus(m);
+              return `
               <tr>
                 <td class="td-mono">${fmtDate(m.scheduledDate)}</td>
                 <td class="td-name">${m.label}</td>
                 <td>${m.employeeName}<br/><span class="td-mono">${m.employeeEmail}</span></td>
-                <td>${statusBadge(m.status)}</td>
+                <td>${statusBadge(eff)}</td>
                 <td>
                   <div style="display:flex;gap:6px">
                     <button class="btn btn-sm btn-secondary hr-agenda-btn" data-id="${m.id}" title="Agenda">${Icon.doc}</button>
@@ -150,7 +164,8 @@ function renderHRSchedule() {
                     ${['pending','booked'].includes(m.status) ? `<button class="btn btn-sm btn-danger hr-cancel-btn" data-id="${m.id}" title="Cancel">${Icon.x}</button>` : ''}
                   </div>
                 </td>
-              </tr>`).join('')}
+              </tr>`;
+            }).join('')}
         </tbody>
       </table>
     </div>`;
@@ -300,6 +315,103 @@ async function showAgendaModal(meetingId) {
     modal.find('#agenda-copy').addEventListener('click', () => copyToClipboard(text));
   } catch (err) {
     modal.setBody(`<p style="color:var(--red)">Failed to generate agenda: ${err.message}</p>`);
+  }
+}
+
+async function renderHRPeople(container) {
+  container.innerHTML = `<div class="empty-state">${Icon.users}<p>Loading people…</p></div>`;
+  try {
+    const { people } = await API.people();
+    hrState.people = people;
+
+    const roleLabel = { hr_admin: 'HR Admin', team_head: 'Team Head', employee: 'Employee' };
+    const typeLabel = { intern: 'Intern', employee: 'Contract', contract: 'Contract', permanent: 'Permanent' };
+
+    container.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <span style="font-size:13px;color:var(--ink-3)">${people.length} people</span>
+        <input class="form-input" id="people-search" placeholder="Search name or email…" style="max-width:240px" />
+      </div>
+      <div class="table-wrap">
+        <table id="people-table">
+          <thead><tr>
+            <th>Name</th><th>Email</th><th>Designation</th><th>Type</th><th>Role</th>
+          </tr></thead>
+          <tbody>
+            ${people.map(p => {
+              const empType = p.isPermanent ? 'permanent' : (p.employmentType || 'employee');
+              return `
+              <tr data-name="${(p.name||'').toLowerCase()}" data-email="${(p.email||'').toLowerCase()}">
+                <td><strong>${p.name || p.id}</strong>${p.initials ? `<span class="td-mono" style="font-size:11px;margin-left:6px">${p.initials}</span>` : ''}</td>
+                <td class="td-mono">${p.email || '—'}</td>
+                <td>${p.designation || '—'}</td>
+                <td>${typeBadge(empType)}</td>
+                <td><span class="badge badge-${p.hrRole}">${roleLabel[p.hrRole] || p.hrRole}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+
+    container.querySelector('#people-search').addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      container.querySelectorAll('#people-table tbody tr').forEach(row => {
+        const match = !q || row.dataset.name.includes(q) || row.dataset.email.includes(q);
+        row.style.display = match ? '' : 'none';
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state">${Icon.users}<p style="color:var(--red)">Failed to load people: ${err.message}</p></div>`;
+  }
+}
+
+async function renderHRSlotsTab(container) {
+  container.innerHTML = `<div class="empty-state">${Icon.clock}<p>Loading slots…</p></div>`;
+  try {
+    const { slots } = await API.slots();
+    hrState.slots = slots.filter(s => s.status !== 'deleted');
+
+    if (!hrState.slots.length) {
+      container.innerHTML = `<div class="empty-state">${Icon.clock}<p>No slots created yet. Team heads can add slots from their dashboard.</p></div>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="table-wrap">
+        <table id="hr-slots-table">
+          <thead><tr>
+            <th>Date</th><th>Time</th><th>Team Head</th><th>Linked Meeting</th><th>Status</th><th>Booked by</th><th>Actions</th>
+          </tr></thead>
+          <tbody>
+            ${hrState.slots.sort((a,b) => (a.date||'').localeCompare(b.date||'')).map(s => `
+              <tr>
+                <td class="td-mono">${fmtDate(s.date)}</td>
+                <td>${s.startTime} – ${s.endTime}</td>
+                <td class="td-mono">${s.teamHeadEmail || '—'}</td>
+                <td class="td-mono" style="font-size:11px">${s.meetingId || '—'}</td>
+                <td>${statusBadge(s.status || 'available')}</td>
+                <td>${s.bookedBy || '—'}</td>
+                <td>
+                  ${s.status !== 'booked' ? `<button class="btn btn-sm btn-danger hr-slot-delete-btn" data-id="${s.id}" title="Delete slot">${Icon.x}</button>` : ''}
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+
+    container.querySelectorAll('.hr-slot-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const ok = await confirm('Delete this slot? This cannot be undone.', 'Delete slot', true);
+        if (!ok) return;
+        try {
+          await API.deleteSlot(btn.dataset.id);
+          Toast.success('Slot deleted');
+          await renderHRSlotsTab(container);
+        } catch (err) { Toast.error(err.message); }
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state">${Icon.clock}<p style="color:var(--red)">Failed to load slots: ${err.message}</p></div>`;
   }
 }
 

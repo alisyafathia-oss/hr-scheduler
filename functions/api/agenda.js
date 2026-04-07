@@ -12,7 +12,7 @@ const { readSheet } = _googleClient;
 const { rowToMeeting } = _scheduleEngine;
 const { generateAgenda, agendaToText } = _agendaTemplates;
 
-const SHEET_ID    = () => process.env.CONTRACTS_SHEET_ID;
+const SHEET_ID    = () => process.env.SCHEDULER_SHEET_ID;
 const MEET_RANGE  = "Meetings!A2:O";
 const CONTR_RANGE = "Contracts!A2:J";
 
@@ -38,7 +38,7 @@ async function handler(event) {
 
     let ctx = {};
     try {
-      const contrRows = await readSheet(process.env.CONTRACTS_SHEET_ID, CONTR_RANGE);
+      const contrRows = await readSheet(process.env.CONTRACTS_SHEET_ID || process.env.SCHEDULER_SHEET_ID, CONTR_RANGE);
       const contrRow  = contrRows.find(
         (r) => r[0] === meeting.employeeId || (r[2] || "").toLowerCase() === meeting.employeeEmail
       );

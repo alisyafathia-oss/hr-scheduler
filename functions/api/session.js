@@ -19,10 +19,11 @@ async function handler(event) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       authenticated: true,
-      email: session.email,
+      email: session.workEmail || session.email || "",
       name: session.name,
       picture: session.picture,
       role: session.role,
+      employeeId: session.employeeId,
     }),
   };
 }

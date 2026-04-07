@@ -10,7 +10,7 @@ const { requireRole } = _auth;
 const { readSheet, writeSheet } = _googleClient;
 const { sendEmail, voteResultEmail } = _mailer;
 
-const SHEET_ID    = () => process.env.CONTRACTS_SHEET_ID;
+const SHEET_ID    = () => process.env.SCHEDULER_SHEET_ID;
 const VOTES_RANGE = "Votes!A2:L";
 
 function rowToVote(row) {

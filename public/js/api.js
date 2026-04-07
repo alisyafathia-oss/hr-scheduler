@@ -46,6 +46,12 @@ const API = (() => {
     // Agenda
     generateAgenda: (meetingId) => request('agenda', { method: 'POST', body: JSON.stringify({ meetingId }) }),
 
+    // People directory (HR only)
+    people: () => request('people'),
+
+    // Slot delete (HR or owning team head)
+    deleteSlot: (slotId) => request('slots/delete', { method: 'POST', body: JSON.stringify({ slotId }) }),
+
     // Manual sync trigger (HR only)
     triggerSync: () => request('sync', { method: 'POST' }),
   };

@@ -16,7 +16,7 @@ const { buildSessionCookie, isHRAdminEmail, verifyHRPassword } = _auth;
 const { readSheet } = _googleClient;
 const { buildPeopleIndex, detectRole } = _columnMap;
 
-const DB_ID = () => process.env.CONTRACTS_SHEET_ID;
+const DB_ID = () => process.env.SCHEDULER_SHEET_ID;
 const PM_ID = () => process.env.PEOPLE_MASTER_SHEET_ID;
 
 function headerIdx(row) {
@@ -93,8 +93,8 @@ async function handler(event) {
       const [[hrHeader], hrRows, [pmHeader], pmRows] = await Promise.all([
         readSheet(DB_ID(), "HR Roles!A1:G1"),
         readSheet(DB_ID(), "HR Roles!A2:G"),
-        readSheet(PM_ID(), "People!A1:H1"),
-        readSheet(PM_ID(), "People!A2:H"),
+        readSheet(PM_ID(), "People!A1:M1"),
+        readSheet(PM_ID(), "People!A2:M"),
       ]);
 
       const hIdx      = headerIdx(hrHeader);

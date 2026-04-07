@@ -5,8 +5,9 @@
 const { readSheet, appendSheet } = require("./google-client");
 const { generateSchedule, meetingToRow, rowToMeeting } = require("./schedule-engine");
 
-const DB_ID = () => process.env.CONTRACTS_SHEET_ID;
-const PM_ID = () => process.env.PEOPLE_MASTER_SHEET_ID;
+const CONTR_ID = () => process.env.CONTRACTS_SHEET_ID;
+const SCHED_ID = () => process.env.SCHEDULER_SHEET_ID;
+const PM_ID    = () => process.env.PEOPLE_MASTER_SHEET_ID;
 
 async function runSync() {
   // ── Read all source sheets in parallel ──────────────────────────────────
@@ -16,13 +17,13 @@ async function runSync() {
     [hrRoleHeader],   hrRoleRows,
     existingRows,
   ] = await Promise.all([
-    readSheet(process.env.CONTRACTS_SHEET_ID_SOURCE || DB_ID(), "Contracts!A1:J1"),
-    readSheet(process.env.CONTRACTS_SHEET_ID_SOURCE || DB_ID(), "Contracts!A2:J"),
-    readSheet(PM_ID(), "People!A1:H1"),
-    readSheet(PM_ID(), "People!A2:H"),
-    readSheet(DB_ID(), "HR Roles!A1:G1"),
-    readSheet(DB_ID(), "HR Roles!A2:G"),
-    readSheet(DB_ID(), "Meetings!A2:O"),
+    readSheet(CONTR_ID(), "Contracts!A1:M1"),
+    readSheet(CONTR_ID(), "Contracts!A2:M"),
+    readSheet(PM_ID(), "People!A1:M1"),
+    readSheet(PM_ID(), "People!A2:M"),
+    readSheet(SCHED_ID(), "HR Roles!A1:G1"),
+    readSheet(SCHED_ID(), "HR Roles!A2:G"),
+    readSheet(SCHED_ID(), "Meetings!A2:O"),
   ]);
 
   const existingIds = new Set(existingRows.map((r) => r[0]).filter(Boolean));
@@ -38,7 +39,7 @@ async function runSync() {
   });
 
   if (meetings.length > 0) {
-    await appendSheet(DB_ID(), "Meetings!A:O", meetings.map(meetingToRow));
+    await appendSheet(SCHED_ID(), "Meetings!A:O", meetings.map(meetingToRow));
   }
 
   return { newMeetings: meetings.length, errors, timestamp: new Date().toISOString() };

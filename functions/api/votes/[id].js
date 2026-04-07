@@ -8,7 +8,7 @@ import _googleClient from "../../../src/lib/google-client.js";
 const { requireAuth } = _auth;
 const { readSheet } = _googleClient;
 
-const SHEET_ID    = () => process.env.CONTRACTS_SHEET_ID;
+const SHEET_ID    = () => process.env.SCHEDULER_SHEET_ID;
 const VOTES_RANGE = "Votes!A2:L";
 
 function rowToVote(row) {
