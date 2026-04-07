@@ -84,7 +84,7 @@ function renderEmpSchedule(meetings, session) {
               <div class="timeline-meta">${m.durationMins} min${m.isGroupSession ? ' · Group session' : ''}</div>
             </div>
             <div class="timeline-actions">
-              ${statusBadge(m.status)}
+              ${statusBadge(effectiveStatus(m))}
               ${m.status === 'pending' ? `<button class="btn btn-sm btn-primary emp-book-btn" data-id="${m.id}">${Icon.clock} Book</button>` : ''}
             </div>
           </div>`).join('')}

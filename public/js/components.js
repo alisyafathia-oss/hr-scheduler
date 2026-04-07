@@ -111,9 +111,18 @@ function fmtDate(str) {
 }
 
 function statusBadge(status) {
-  const map = { pending: 'Pending', booked: 'Booked', completed: 'Completed',
-                cancelled: 'Cancelled', open: 'Open', tie: 'Tie', resolved: 'Resolved' };
+  const map = { pending: 'Pending', overdue: 'Overdue', booked: 'Booked',
+                completed: 'Completed', cancelled: 'Cancelled',
+                open: 'Open', tie: 'Tie', resolved: 'Resolved' };
   return `<span class="badge badge-${status}">${map[status] || status}</span>`;
+}
+
+function effectiveStatus(meeting) {
+  if (meeting.status === 'pending') {
+    const today = new Date().toISOString().split('T')[0];
+    if (meeting.scheduledDate && meeting.scheduledDate < today) return 'overdue';
+  }
+  return meeting.status;
 }
 
 function typeBadge(type) {

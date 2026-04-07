@@ -63,12 +63,19 @@ async function handler(event) {
       const teamCheck = requireRole(event, "team_head", "hr_admin");
       if (teamCheck.error) return teamCheck.error;
 
-      const calendarId = event.queryStringParameters?.calendarId || session.email;
+      const calendarId = event.queryStringParameters?.calendarId || session.workEmail || session.email;
       const daysAhead  = parseInt(event.queryStringParameters?.days || "14");
       const now        = new Date();
       const until      = addDays(now, daysAhead);
 
-      const busyBlocks = await listFreeBusy(calendarId, now.toISOString(), until.toISOString());
+      let busyBlocks = [];
+      let calendarNote = null;
+      try {
+        busyBlocks = await listFreeBusy(calendarId, now.toISOString(), until.toISOString());
+      } catch (calErr) {
+        console.error("Calendar free/busy fetch failed:", calErr.message);
+        calendarNote = "Calendar access unavailable — showing all business hours as free. Ask your Google Workspace admin to share calendar access with the service account.";
+      }
 
       const suggestions = [];
       let cursor = new Date(now);
@@ -96,7 +103,7 @@ async function handler(event) {
         cursor = addMinutes(cursor, 60);
       }
 
-      return json({ suggestions, busyBlocks });
+      return json({ suggestions, busyBlocks, calendarNote });
     }
 
     // POST /api/slots — team head creates a slot

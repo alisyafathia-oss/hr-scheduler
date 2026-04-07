@@ -244,6 +244,7 @@ tr:hover td { background: var(--surface-2); }
 .badge-open      { background: var(--blue-light); color: var(--blue); }
 .badge-tie       { background: var(--amber-light); color: var(--amber); }
 .badge-resolved  { background: #dcfce7; color: #166534; }
+.badge-overdue   { background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; }
 .badge-intern    { background: #f0fdf4; color: #15803d; }
 .badge-contract  { background: #eff6ff; color: #1d4ed8; }
 .badge-permanent { background: #faf5ff; color: #7e22ce; }

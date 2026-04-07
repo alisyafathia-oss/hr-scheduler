@@ -38,7 +38,7 @@ async function switchThTab(tab, session) {
   if (tab === 'slots') {
     content.innerHTML = `<div class="empty-state">${Icon.clock}<p>Loading slots…</p></div>`;
     try {
-      const { slots } = await API.slots({ teamHeadEmail: session.email });
+      const { slots } = await API.slots({ teamHeadEmail: session.email || session.workEmail });
       thState.slots = slots;
       content.innerHTML = renderThSlots(slots);
     } catch (e) { Toast.error(e.message); }
@@ -57,11 +57,14 @@ async function switchThTab(tab, session) {
     content.querySelector('#fetch-avail-btn').addEventListener('click', async (e) => {
       setLoading(e.target, true);
       try {
-        const { suggestions } = await API.availability({ days: 14 });
+        const { suggestions, calendarNote } = await API.availability({ days: 14 });
         thState.suggestions = suggestions;
         const resultsEl = content.querySelector('#avail-results');
+        if (calendarNote) {
+          resultsEl.innerHTML = `<p style="font-size:13px;color:var(--amber);margin-bottom:8px">⚠ ${calendarNote}</p>`;
+        }
         if (!suggestions.length) {
-          resultsEl.innerHTML = `<p style="font-size:13px;color:var(--ink-3)">No free windows found in the next 14 days.</p>`;
+          resultsEl.innerHTML += `<p style="font-size:13px;color:var(--ink-3)">No free windows found in the next 14 days.</p>`;
         } else {
           resultsEl.innerHTML = `
             <p style="font-size:13px;color:var(--ink-3);margin-bottom:8px">Click a slot to pre-fill the form above:</p>

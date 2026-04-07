@@ -1,7 +1,7 @@
 // public/js/views/hr-dashboard.js
 // HR Admin dashboard — Overview | Schedule (grouped by employee) | People | Group Votes
 
-let hrState = { meetings: [], tab: 'overview', filter: 'all' };
+let hrState = { meetings: [], slots: [], tab: 'overview', filter: 'all' };
 
 async function renderHRDashboard(session) {
   document.getElementById('app').innerHTML = renderShell(session, 'home', `
@@ -12,6 +12,8 @@ async function renderHRDashboard(session) {
     <div class="tab-bar">
       <button class="tab active" data-tab="overview">Overview</button>
       <button class="tab" data-tab="schedule">Schedule</button>
+      <button class="tab" data-tab="people">People</button>
+      <button class="tab" data-tab="slots">Slots</button>
       <button class="tab" data-tab="votes">Group Votes</button>
     </div>
     <div id="hr-tab-content">
@@ -53,6 +55,7 @@ function switchTab(tab) {
   if (tab === 'schedule') { content.innerHTML = renderHRSchedule(); attachHRHandlers(tab); }
   if (tab === 'votes')    { renderHRVotes(content); }
   if (tab === 'people')   { renderHRPeople(content); }
+  if (tab === 'slots')    { renderHRSlotsTab(content); }
 }
 
 // ── Overview tab ──────────────────────────────────────────────────────────────
@@ -131,7 +134,8 @@ function renderHRSchedule() {
     if (!byEmp[m.employeeId]) {
       byEmp[m.employeeId] = { id: m.employeeId, name: m.employeeName, email: m.employeeEmail, meetings: [] };
     }
-    if (f === 'all' || m.status === f) byEmp[m.employeeId].meetings.push(m);
+    const eff = effectiveStatus(m);
+    if (f === 'all' || m.status === f || (f === 'overdue' && eff === 'overdue')) byEmp[m.employeeId].meetings.push(m);
   });
 
   const employees = Object.values(byEmp)
@@ -143,7 +147,7 @@ function renderHRSchedule() {
   return `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <span style="font-size:13px;color:var(--ink-3)">Filter:</span>
-      ${['all','pending','booked','completed','cancelled'].map(s =>
+      ${['all','overdue','pending','booked','completed','cancelled'].map(s =>
         `<button class="btn btn-sm ${f === s ? 'btn-primary' : 'btn-secondary'} filter-btn" data-filter="${s}">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`
       ).join('')}
       <span style="margin-left:auto;font-size:13px;color:var(--ink-3)">${employees.length} employees · ${totalShown} meetings</span>
@@ -163,7 +167,7 @@ function renderHRSchedule() {
                   <div style="font-size:12px;color:var(--ink-3)">${emp.email || ''}</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px">
-                  ${overdue > 0 ? `<span class="badge badge-cancelled">${overdue} overdue</span>` : ''}
+                  ${overdue > 0 ? `<span class="badge badge-overdue">${overdue} overdue</span>` : ''}
                   <span class="badge badge-pending">${pending} pending</span>
                   <span style="font-size:12px;color:var(--ink-3)">${sorted.length} total</span>
                   <span id="chev-${emp.id}" style="font-size:13px;color:var(--ink-3)">▼</span>
@@ -182,7 +186,7 @@ function renderHRSchedule() {
                       <tr style="border-top:1px solid var(--border)">
                         <td style="padding:7px 16px;font-size:13px;font-family:monospace;color:${m.status==='pending'&&m.scheduledDate<today?'var(--red)':'inherit'};white-space:nowrap">${fmtDate(m.scheduledDate)}</td>
                         <td style="padding:7px 16px;font-size:13px">${m.label}</td>
-                        <td style="padding:7px 16px">${statusBadge(m.status)}</td>
+                        <td style="padding:7px 16px">${statusBadge(effectiveStatus(m))}</td>
                         <td style="padding:7px 16px">
                           <div style="display:flex;gap:4px;flex-wrap:wrap">
                             <button class="btn btn-sm btn-secondary hr-agenda-btn" data-id="${m.id}" title="Agenda">${Icon.doc}</button>
@@ -421,6 +425,58 @@ async function showAgendaModal(meetingId) {
     modal.find('#agenda-copy').addEventListener('click', () => copyToClipboard(text));
   } catch (err) {
     modal.setBody(`<p style="color:var(--red)">Failed to generate agenda: ${err.message}</p>`);
+  }
+}
+
+// ── Slots tab ─────────────────────────────────────────────────────────────────
+
+async function renderHRSlotsTab(container) {
+  container.innerHTML = `<div class="empty-state">${Icon.clock}<p>Loading slots…</p></div>`;
+  try {
+    const { slots } = await API.slots();
+    hrState.slots = (slots || []).filter(s => s.status !== 'deleted');
+
+    if (!hrState.slots.length) {
+      container.innerHTML = `<div class="empty-state">${Icon.clock}<p>No slots created yet. Team heads add slots from their dashboard.</p></div>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Date</th><th>Time</th><th>Team Head</th><th>Linked Meeting</th><th>Status</th><th>Booked by</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${hrState.slots.sort((a,b) => (a.date||'').localeCompare(b.date||'')).map(s => `
+              <tr>
+                <td class="td-mono">${fmtDate(s.date)}</td>
+                <td>${s.startTime} – ${s.endTime}</td>
+                <td class="td-mono" style="font-size:12px">${s.teamHeadEmail || '—'}</td>
+                <td class="td-mono" style="font-size:11px">${s.meetingId || '—'}</td>
+                <td>${statusBadge(s.status || 'available')}</td>
+                <td>${s.bookedBy || '—'}</td>
+                <td>
+                  ${s.status !== 'booked' ? `<button class="btn btn-sm btn-danger hr-slot-delete-btn" data-id="${s.id}" title="Delete">${Icon.x}</button>` : ''}
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+
+    container.querySelectorAll('.hr-slot-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const ok = await confirm('Delete this slot? This cannot be undone.', 'Delete slot', true);
+        if (!ok) return;
+        try {
+          await API.deleteSlot(btn.dataset.id);
+          Toast.success('Slot deleted');
+          renderHRSlotsTab(container);
+        } catch (err) { Toast.error(err.message); }
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state">${Icon.clock}<p style="color:var(--red)">Failed to load slots: ${err.message}</p></div>`;
   }
 }
 

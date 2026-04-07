@@ -19,8 +19,8 @@ async function runSync() {
   ] = await Promise.all([
     readSheet(process.env.CONTRACTS_SHEET_ID_SOURCE || DB_ID(), "Contracts!A1:J1"),
     readSheet(process.env.CONTRACTS_SHEET_ID_SOURCE || DB_ID(), "Contracts!A2:J"),
-    readSheet(PM_ID(), "People_Master!A1:H1"),
-    readSheet(PM_ID(), "People_Master!A2:H"),
+    readSheet(PM_ID(), "People_Master!A1:M1"),
+    readSheet(PM_ID(), "People_Master!A2:M"),
     readSheet(SCHED_ID(), "HR Roles!A1:G1"),
     readSheet(SCHED_ID(), "HR Roles!A2:G"),
     readSheet(SCHED_ID(), "Meetings!A2:O"),

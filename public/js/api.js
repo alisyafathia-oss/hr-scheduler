@@ -54,5 +54,8 @@ const API = (() => {
 
     // Skip meeting (silent cancel — no email)
     skipMeeting: (meetingId) => request('meetings/skip', { method: 'POST', body: JSON.stringify({ meetingId }) }),
+
+    // Slot delete (HR or owning team head)
+    deleteSlot: (slotId) => request('slots/delete', { method: 'POST', body: JSON.stringify({ slotId }) }),
   };
 })();
