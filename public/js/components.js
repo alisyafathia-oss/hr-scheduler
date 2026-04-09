@@ -159,7 +159,6 @@ function renderShell(session, activeNav, contentHtml) {
   const teamNav = session.role === 'team_head' ? `
     <span class="sidebar-section-label">My Team</span>
     <button class="nav-item ${activeNav === 'th-slots' ? 'active' : ''}" data-nav="th-slots">${Icon.clock} My Slots</button>
-    <button class="nav-item ${activeNav === 'th-schedule' ? 'active' : ''}" data-nav="th-schedule">${Icon.calendar} Team Schedule</button>
   ` : '';
 
   const empNav = session.role !== 'hr_admin' ? `

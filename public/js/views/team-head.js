@@ -10,7 +10,6 @@ async function renderTeamHeadDashboard(session) {
     <div class="tab-bar">
       <button class="tab active" data-tab="slots">My Slots</button>
       <button class="tab" data-tab="add">Add Slot</button>
-      <button class="tab" data-tab="schedule">Team Schedule</button>
     </div>
     <div id="th-tab-content"></div>
   `);
@@ -22,7 +21,6 @@ async function renderTeamHeadDashboard(session) {
     btn.addEventListener('click', () => {
       const n = btn.dataset.nav;
       if (n === 'th-slots') switchThTab('slots', session);
-      else if (n === 'th-schedule') switchThTab('schedule', session);
     });
   });
 

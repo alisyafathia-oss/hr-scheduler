@@ -52,9 +52,13 @@ async function switchEmpTab(tab, session) {
         API.slots({ status: 'available' }),
         API.meetings({ status: 'pending' }),
       ]);
-      empState.slots    = slots;
-      empState.meetings = meetings;
-      content.innerHTML = renderBookingView(slots, meetings);
+      empState.slots = slots;
+      // Only show meetings where the employee's team head has submitted at least one slot
+      const bookableMeetings = meetings.filter(m =>
+        m.managerEmail && slots.some(s => s.teamHeadEmail === m.managerEmail)
+      );
+      empState.meetings = bookableMeetings;
+      content.innerHTML = renderBookingView(slots, bookableMeetings);
       attachBookingHandlers(content, session);
     } catch (e) { Toast.error(e.message); }
   }

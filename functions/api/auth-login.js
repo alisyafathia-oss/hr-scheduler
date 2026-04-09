@@ -94,8 +94,8 @@ async function handler(event) {
       const [[hrHeader], hrRows, [pmHeader], pmRows] = await Promise.all([
         readSheet(SCHED_ID(), "HR Roles!A1:G1"),
         readSheet(SCHED_ID(), "HR Roles!A2:G"),
-        readSheet(PM_ID(), "People_Master!A1:H1"),
-        readSheet(PM_ID(), "People_Master!A2:H"),
+        readSheet(PM_ID(), "People_Master!A1:M1"),
+        readSheet(PM_ID(), "People_Master!A2:M"),
       ]);
 
       const hIdx      = headerIdx(hrHeader);
